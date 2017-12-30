@@ -39,7 +39,7 @@ with tf.Session() as session:
             # forward pass to predict next action and state
             last_action = agent.action([eth_price, self.eth, self.usd])
             print("last action", last_action)
-            self.usd, self.eth = agent.step([eth_price, self.eth, self.usd], action)
+            self.usd, self.eth = agent.step([eth_price, self.eth, self.usd], last_action)
             self.last_state = [self.usd, self.eth, eth_price, last_action]
 
     state_size = 4
