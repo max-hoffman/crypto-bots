@@ -11,7 +11,7 @@ with tf.Session() as session:
             self.iteration = 0
             self.usd = 10
             self.eth = .05
-            self.last_eth = 0
+            self.last_net = self.usd + self.eth * 700
             self.last_state = [self.usd, self.eth, 700, 0]
             print("Lets count the messages!")
 
@@ -34,12 +34,14 @@ with tf.Session() as session:
                 # back-propogate with last net
                 agent.train(state=self.last_state,
                             target=current_net,
+                            reward=current_net - self.last_net,
                             iteration=self.iteration)
 
                 # forward pass to predict next action and state
                 last_action = agent.action([eth_price, self.eth, self.usd])
                 self.usd, self.eth = agent.step([self.usd, self.eth, eth_price], last_action)
                 self.last_state = [self.usd, self.eth, eth_price, last_action]
+                self.last_net = current_net
 
                 if self.iteration % 200 == 0:
                     print("iteration", self.iteration)

@@ -35,6 +35,7 @@ class RLAgent:
             self.h_start = tf.placeholder(tf.float32, shape=[1, hidden_size]) # (batch, time, in)
             self.y_out = tf.placeholder(tf.float32, shape=[1, action_size])
             self.y_target = tf.placeholder(tf.float32, shape=[])
+            self.step_reward = tf.placeholder(tf.float32, shape=[])
 
         # with tf.name_scope('forward-pass'):
         #     cell = tf.nn.rnn_cell.LSTMCell(num_units=RNN_HIDDEN)
@@ -63,25 +64,27 @@ class RLAgent:
 
             self.h_last = h_state
 
-        with tf.name_scope('squared-error'):
-            self.squared_error = tf.reduce_sum(tf.squared_difference(self.y_out, tf.expand_dims(self.y_target,0)))
+        with tf.name_scope('error'):
+            self.error = tf.reduce_sum(tf.squared_difference(self.y_out, tf.expand_dims(self.y_target,0))) - self.step_reward
 
         with tf.name_scope('train'):
-            self.train_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.squared_error)
+            self.train_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.error)
 
         # track cost and accuracy
-        tf.summary.scalar("error", self.squared_error)
+        tf.summary.scalar("error", self.error)
         tf.summary.histogram("expected reward", self.y_out)
         self.summary_op = tf.summary.merge_all(key=tf.GraphKeys.SUMMARIES)
         self.writer = tf.summary.FileWriter(logs_path , session.graph)
     
-    def train(self, state, target, iteration):
+    def train(self, state, target, reward, iteration):
+        self.training_step += 1
         state = np.array(state)
         target = np.array(target)
         _, h_state, summary = self.session.run([self.train_op, self.h_last, self.summary_op],
                                                feed_dict={ self.x_in: state,
                                                            self.h_start: self.hidden_state,
-                                                           self.y_target: target })
+                                                           self.y_target: target,
+                                                           self.step_reward: reward })
         self.writer.add_summary(summary, iteration)
         self.training_step += 1
         self.hidden_state = h_state
@@ -89,7 +92,9 @@ class RLAgent:
 
     def action(self, state): 
         # state = [usd, eth, eth_price]
-
+        if self.epsilon > self.epsilon_min:
+            if self.training_step % 50 == 0:
+                self.epsilon *= self.epsilon_decay
         if np.random.rand() <= self.epsilon:
             return rd.randrange(0, 3)
 
