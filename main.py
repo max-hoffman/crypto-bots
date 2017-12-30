@@ -10,7 +10,7 @@ with tf.Session() as session:
             self.products = ["ETH-USD"]
             self.iteration = 0
             self.usd = 10
-            self.eth = 0
+            self.eth = .05
             self.last_eth = 0
             self.last_state = [self.usd, self.eth, 700, 0]
             print("Lets count the messages!")
@@ -23,25 +23,33 @@ with tf.Session() as session:
         def on_message(self, msg):
             global agent
             self.iteration += 1
-            # if 'price' in msg and 'type' in msg:
+            if 'price' in msg and 'type' in msg:
             #     print ("Message type:", msg["type"],
             #            "\t@ {:.3f}".format(float(msg["price"])))
 
-            # get new trade
-            eth_price = float(msg["price"])
-            current_net = self.eth * eth_price + self.usd
+                # get new trade
+                eth_price = float(msg["price"])
+                current_net = self.eth * eth_price + self.usd
 
-            # back-propogate with last net
-            agent.train(state=self.last_state,
-                        target=current_net,
-                        iteration=self.iteration)
+                # back-propogate with last net
+                agent.train(state=self.last_state,
+                            target=current_net,
+                            iteration=self.iteration)
 
-            # forward pass to predict next action and state
-            last_action = agent.action([eth_price, self.eth, self.usd])
-            print("last action", last_action)
-            self.usd, self.eth = agent.step([eth_price, self.eth, self.usd], last_action)
-            self.last_state = [self.usd, self.eth, eth_price, last_action]
+                # forward pass to predict next action and state
+                last_action = agent.action([eth_price, self.eth, self.usd])
+                self.usd, self.eth = agent.step([self.usd, self.eth, eth_price], last_action)
+                self.last_state = [self.usd, self.eth, eth_price, last_action]
 
+                if self.iteration % 200 == 0:
+                    print("iteration", self.iteration)
+                    print("state", self.last_state)
+                    print("current net", current_net)
+                    print("-----------")
+                    # print("eth price", eth_price)
+                    # print("eth", self.eth)
+                    # print("usd", self.usd)
+                
     state_size = 4
     output_size = 1
     logs_path = 'logs'
@@ -54,7 +62,7 @@ with tf.Session() as session:
     wsClient = myWebsocketClient()
     wsClient.start()
     print(wsClient.url, wsClient.products)
-    while (wsClient.iteration < 500):
-        print ("\niteration =", "{} \n".format(wsClient.iteration))
+    while (wsClient.iteration < 10000):
+        # print ("\niteration =", "{} \n".format(wsClient.iteration))
         time.sleep(1)
     wsClient.close()

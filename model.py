@@ -16,11 +16,12 @@ class RLAgent:
         self.epsilon = .1  # exploration rate
         self.epsilon_min = 0.01
         self.epsilon_decay = 0.995
-        self.learning_rate = 0.01
+        self.learning_rate = 0.5
         self.session = session
         self.training_step = 0
         self.trade_amount = .01
         self.hidden_state = np.zeros([1,32])
+        rd.seed()
 
         RNN_HIDDEN = 20
         hidden_size = 32
@@ -77,9 +78,6 @@ class RLAgent:
     def train(self, state, target, iteration):
         state = np.array(state)
         target = np.array(target)
-        print("state", state)
-        print("self hidden", self.hidden_state)
-        print("target", target)
         _, h_state, summary = self.session.run([self.train_op, self.h_last, self.summary_op],
                                                feed_dict={ self.x_in: state,
                                                            self.h_start: self.hidden_state,
@@ -89,45 +87,58 @@ class RLAgent:
         self.hidden_state = h_state
         return h_state
 
-    def action(self, state): # state = [usd, eth, eth_price]
-        # def destructure(state):
-        #     return state[0], state[1], state[2]
+    def action(self, state): 
+        # state = [usd, eth, eth_price]
 
+        if np.random.rand() <= self.epsilon:
+            return rd.randrange(0, 3)
+
+        hidden_state = self.hidden_state # we want same hidden state for each
+        q = np.zeros([3,1]) # hold, buy, sell
         states_actions = np.zeros([3,4])
+
         states_actions[0] = np.array([state[0], state[1], state[2], 0])
         states_actions[1] = np.array([state[0], state[1], state[2], 1])
         states_actions[2] = np.array([state[0], state[1], state[2], 2])
-        print(states_actions[1])
-        hidden_state = self.hidden_state # we want same hidden state for each
-        q = np.zeros([3,1]) # hold, buy, sell
-        print("hidden state", hidden_state)
-        print("zeroth a/s", states_actions[0])
+
         q[0] = self.session.run(self.y_out, feed_dict={ self.x_in: states_actions[0], self.h_start: hidden_state })
         q[1] = self.session.run(self.y_out, feed_dict={ self.x_in: states_actions[1], self.h_start: hidden_state })
         q[2] = self.session.run(self.y_out, feed_dict={ self.x_in: states_actions[2], self.h_start: hidden_state })
+
         self.hidden_state = hidden_state
+        # print(q)
         return np.argmax(q)
 
     def step(self, state, action):
         usd, eth, eth_price = state
 
-        if action == 1:                                     # buy eth
+        # if isInactive(state, action):
+        #     return usd, eth
+        if action == 1:                                   # buy eth
             usd_sell = .05 * usd                            # buy with 5% of remaining usd
             buy_price = eth_price * (1 + .005)              # .5% markup
             eth_buy = (usd_sell / buy_price) * (1 - .0025)  # .25% trade fee
             usd = usd - usd_sell
             eth = eth + eth_buy
-        elif action == 2:                                # sell eth
+        elif action == 2:                                   # sell eth
             eth_sell = .05 * eth                            # sell 5% of remaining eth
             sell_price = eth_price * (1 - .005)             # .5% markdown
             usd_buy = eth_sell * sell_price * (1 - .0025)   # .25% trade fee
             usd = usd + usd_buy
             eth = eth - eth_sell
-
         return usd, eth
         # change the state according to the action
-        
         
     def kill(self):
         self.writer.close()
         sys.exit()
+
+def isInactive(state, action):
+    usd, eth, eth_price = state
+    if action == 0:
+        return True
+    elif action == 2 and eth == 0:
+        return True
+    elif action == 1 and usd == 0:
+        return True
+    return False
