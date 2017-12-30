@@ -1,27 +1,27 @@
 import gdax, time
+import tensorflow as tf
 from model import RLAgent
 
 with tf.Session() as session:
 
-    class myWebsocketClient(gdax.WebsocketClient, agent):
+    class myWebsocketClient(gdax.WebsocketClient):
         def on_open(self):
             self.url = "wss://ws-feed.gdax.com/"
             self.products = ["ETH-USD"]
             self.iteration = 0
-            self.agent = agent
             self.usd = 10
             self.eth = 0
             self.last_eth = 0
-            self.last_state = [self.usd, self.eth, ]
+            self.last_state = [self.usd, self.eth, 700, 0]
             print("Lets count the messages!")
 
-            self.last_state = 1
-
         def on_close(self):
+            global agent
             print("-- Goodbye! --")
-            self.agent.kill()
+            agent.kill()
 
         def on_message(self, msg):
+            global agent
             self.iteration += 1
             # if 'price' in msg and 'type' in msg:
             #     print ("Message type:", msg["type"],
@@ -29,32 +29,32 @@ with tf.Session() as session:
 
             # get new trade
             eth_price = float(msg["price"])
-
-            # predict current net
             current_net = self.eth * eth_price + self.usd
 
             # back-propogate with last net
-            self.agent.train(self.last_state, current_net, self.iteration)
+            agent.train(state=self.last_state,
+                        target=current_net,
+                        iteration=self.iteration)
 
             # forward pass to predict next action and state
-            last_action = self.agent.action([eth_price, self.eth, self.usd])
-            self.usd, self.eth = self.agent.step([eth_price, self.eth, self.usd], action)
+            last_action = agent.action([eth_price, self.eth, self.usd])
+            print("last action", last_action)
+            self.usd, self.eth = agent.step([eth_price, self.eth, self.usd], action)
             self.last_state = [self.usd, self.eth, eth_price, last_action]
-    state_size = 20
-    action_size = 41
-    training_epochs = 5
-    terminal = False
+
+    state_size = 4
+    output_size = 1
     logs_path = 'logs'
     epochReward = 0
     iteration = 0
 
-    agent = RLAgent(state_size, action_size, session, logs_path)
-    session.run(tf.initialize_all_variables())
+    agent = RLAgent(state_size, output_size, session, logs_path)
+    session.run(tf.global_variables_initializer())
 
     wsClient = myWebsocketClient()
     wsClient.start()
     print(wsClient.url, wsClient.products)
-    while (wsClient.message_count < 500):
-        print ("\nmessage_count =", "{} \n".format(wsClient.message_count))
+    while (wsClient.iteration < 500):
+        print ("\niteration =", "{} \n".format(wsClient.iteration))
         time.sleep(1)
     wsClient.close()
