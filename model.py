@@ -5,6 +5,7 @@ import numpy as np
 from collections import deque
 import tensorflow as tf
 import tensorflow.contrib.layers as layers
+from gru import GRUStack
 import sys
 
 class RLAgent:
@@ -22,7 +23,7 @@ class RLAgent:
         self.trade_amount = .01
         rd.seed()
 
-        RNN_HIDDEN = 20
+        cell_layers = 8
         hidden_size = 32
         NON_ZERO_PENALTY = 1
         TINY          = 1e-6    # to avoid NaNs in logs
@@ -40,14 +41,14 @@ class RLAgent:
             self.s_start = tf.placeholder(tf.float32, shape=[1, hidden_size]) # (batch, time, in)
             # self.c_start = tf.placeholder(tf.float32, shape=[1, hidden_size])
 
-        with tf.name_scope('rnn'):
-            self.f = tf.placeholder(tf.float32, shape=[1, hidden_size])
-            self.i = tf.placeholder(tf.float32, shape=[1, hidden_size])
-            self.g = tf.placeholder(tf.float32, shape=[1, hidden_size])
-            self.o = tf.placeholder(tf.float32, shape=[1, hidden_size])
+        with tf.name_scope('gru'):
+            # self.f = tf.placeholder(tf.float32, shape=[1, hidden_size])
+            # self.i = tf.placeholder(tf.float32, shape=[1, hidden_size])
+            # self.g = tf.placeholder(tf.float32, shape=[1, hidden_size])
+            # self.o = tf.placeholder(tf.float32, shape=[1, hidden_size])
             self.y_out = tf.placeholder(tf.float32, shape=[1, action_size])
 
-            initializer = tf.random_normal_initializer(stddev=0.1)
+            # initializer = tf.random_normal_initializer(stddev=0.1)
 
             # rnn
             # w_xh = tf.get_variable("w_xh", [state_size,hidden_size], initializer=initializer)
@@ -94,26 +95,27 @@ class RLAgent:
             # print(tf.trainable_variables())
 
             # gru
-            u_xz = tf.get_variable("u_xz", [state_size,hidden_size], initializer=initializer)
-            u_xr = tf.get_variable("u_xr", [state_size,hidden_size], initializer=initializer)
-            u_xh = tf.get_variable("u_xh",[state_size,hidden_size], initializer=initializer)
+            # u_xz = tf.get_variable("u_xz", [state_size,hidden_size], initializer=initializer)
+            # u_xr = tf.get_variable("u_xr", [state_size,hidden_size], initializer=initializer)
+            # u_xh = tf.get_variable("u_xh",[state_size,hidden_size], initializer=initializer)
 
-            w_sz = tf.get_variable("w_sz",[hidden_size,hidden_size], initializer=initializer)
-            w_sh = tf.get_variable("w_sh", [hidden_size,hidden_size], initializer=initializer)
-            w_sr = tf.get_variable("w_sr", [hidden_size,hidden_size], initializer=initializer)
+            # w_sz = tf.get_variable("w_sz",[hidden_size,hidden_size], initializer=initializer)
+            # w_sh = tf.get_variable("w_sh", [hidden_size,hidden_size], initializer=initializer)
+            # w_sr = tf.get_variable("w_sr", [hidden_size,hidden_size], initializer=initializer)
 
-            b_z = tf.get_variable("b_z",[hidden_size], initializer=initializer)
-            b_r = tf.get_variable("b_r",[hidden_size], initializer=initializer)
-            b_h = tf.get_variable("b_h", [hidden_size],initializer=initializer)
+            # b_z = tf.get_variable("b_z",[hidden_size], initializer=initializer)
+            # b_r = tf.get_variable("b_r",[hidden_size], initializer=initializer)
+            # b_h = tf.get_variable("b_h", [hidden_size],initializer=initializer)
             
-            w_sy = tf.get_variable("w_sy",[hidden_size,action_size], initializer=initializer)
-            b_y = tf.get_variable("b_y",[action_size], initializer=initializer)
+            # w_sy = tf.get_variable("w_sy",[hidden_size,action_size], initializer=initializer)
+            # b_y = tf.get_variable("b_y",[action_size], initializer=initializer)
 
-            z = tf.sigmoid(tf.matmul(tf.expand_dims(self.x_in,0), u_xz) + tf.matmul(self.s_start, w_sz) + b_z)
-            r = tf.sigmoid(tf.matmul(tf.expand_dims(self.x_in,0), u_xr) + tf.matmul(self.s_start, w_sr) + b_r)
-            h = tf.tanh(tf.matmul(tf.expand_dims(self.x_in,0), u_xh) + tf.matmul(tf.multiply(self.s_start, r), w_sh) + b_h)
-            self.s_new = tf.add(tf.multiply((1 - z), h), tf.multiply(z, self.s_start))
-            self.y_out = tf.matmul(self.s_new, w_sy) + b_y
+            # z = tf.sigmoid(tf.matmul(tf.expand_dims(self.x_in,0), u_xz) + tf.matmul(self.s_start, w_sz) + b_z)
+            # r = tf.sigmoid(tf.matmul(tf.expand_dims(self.x_in,0), u_xr) + tf.matmul(self.s_start, w_sr) + b_r)
+            # h = tf.tanh(tf.matmul(tf.expand_dims(self.x_in,0), u_xh) + tf.matmul(tf.multiply(self.s_start, r), w_sh) + b_h)
+            # self.s_new = tf.add(tf.multiply((1 - z), h), tf.multiply(z, self.s_start))
+            # self.y_out = tf.matmul(self.s_new, w_sy) + b_y
+            self.y_out, self.s_new = GRUStack(self.x_in, self.s_start, cell_layers)
 
         with tf.name_scope('error'):
             self.error = tf.reduce_sum(tf.squared_difference(self.y_out, tf.expand_dims(self.y_target,0))) - self.step_reward
