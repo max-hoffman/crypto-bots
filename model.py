@@ -20,7 +20,6 @@ class RLAgent:
         self.session = session
         self.training_step = 0
         self.trade_amount = .01
-        self.hidden_state = np.zeros([1,32])
         rd.seed()
 
         RNN_HIDDEN = 20
@@ -30,39 +29,91 @@ class RLAgent:
         OUTPUT_SIZE = 1
         TIMESTEPS = 1
 
+        self.hidden_state = np.zeros([1,hidden_size])
+        self.memory = np.zeros([1,hidden_size])
+
         with tf.name_scope('input'):
             self.x_in = tf.placeholder(tf.float32, shape=[state_size]) # (batch, time, in)
-            self.h_start = tf.placeholder(tf.float32, shape=[1, hidden_size]) # (batch, time, in)
-            self.y_out = tf.placeholder(tf.float32, shape=[1, action_size])
             self.y_target = tf.placeholder(tf.float32, shape=[])
             self.step_reward = tf.placeholder(tf.float32, shape=[])
 
-        # with tf.name_scope('forward-pass'):
-        #     cell = tf.nn.rnn_cell.LSTMCell(num_units=RNN_HIDDEN)
+            self.s_start = tf.placeholder(tf.float32, shape=[1, hidden_size]) # (batch, time, in)
+            # self.c_start = tf.placeholder(tf.float32, shape=[1, hidden_size])
 
-        #     batch_size    = tf.shape(self.x_in)[0]
-        #     initial_state = cell.zero_state(batch_size, tf.float32)
+        with tf.name_scope('rnn'):
+            self.f = tf.placeholder(tf.float32, shape=[1, hidden_size])
+            self.i = tf.placeholder(tf.float32, shape=[1, hidden_size])
+            self.g = tf.placeholder(tf.float32, shape=[1, hidden_size])
+            self.o = tf.placeholder(tf.float32, shape=[1, hidden_size])
+            self.y_out = tf.placeholder(tf.float32, shape=[1, action_size])
 
-        #     # rnn_outputs, rnn_states = tf.nn.dynamic_rnn(cell, self.x_in, initial_state=initial_state)
-        #     rnn_outputs, rnn_states = tf.nn.static_rnn(cell, [self.x_in], initial_state=initial_state)
+            initializer = tf.random_normal_initializer(stddev=0.1)
 
-        #     self.y  = layers.linear(rnn_outputs, num_outputs=OUTPUT_SIZE, activation_fn=None)
+            # rnn
+            # w_xh = tf.get_variable("w_xh", [state_size,hidden_size], initializer=initializer)
+            # w_hh = tf.get_variable("w_hh", [hidden_size,hidden_size], initializer=initializer)
+            # w_hy = tf.get_variable("w_hy",[hidden_size,action_size], initializer=initializer)
+            # b_h = tf.get_variable("b_h", [hidden_size],initializer=initializer)
+            # b_y = tf.get_variable("b_y",[action_size], initializer=initializer)
 
-        initializer = tf.random_normal_initializer(stddev=0.1)
-        with tf.variable_scope('rnn') as rnn_scope:
-            # assert rnn_scope.reuse == True
-            h_state = self.h_start
+            # h_state = tf.tanh(tf.matmul(tf.expand_dims(self.x_in,0), w_xh) + tf.matmul(h_state, w_hh) + b_h)
+            # self.y_out = tf.matmul(h_state, w_hy) + b_y
 
-            w_xh = tf.get_variable("w_xh", [state_size,hidden_size], initializer=initializer)
-            w_hh = tf.get_variable("w_hh", [hidden_size,hidden_size], initializer=initializer)
-            w_hy = tf.get_variable("w_hy",[hidden_size,action_size], initializer=initializer)
+            # lstm
+            # u_xi = tf.get_variable("u_xi", [state_size,hidden_size], initializer=initializer)
+            # u_xf = tf.get_variable("u_xf", [state_size,hidden_size], initializer=initializer)
+            # u_xo = tf.get_variable("u_xo", [state_size,hidden_size], initializer=initializer)
+            # u_xg = tf.get_variable("u_xg", [state_size,hidden_size], initializer=initializer)
+
+            # w_si = tf.get_variable("w_si", [hidden_size,hidden_size], initializer=initializer)
+            # w_sf = tf.get_variable("w_sf", [hidden_size,hidden_size], initializer=initializer)
+            # w_so = tf.get_variable("w_so", [hidden_size,hidden_size], initializer=initializer)
+            # w_sg = tf.get_variable("w_sg", [hidden_size,hidden_size], initializer=initializer)
+            # w_sy = tf.get_variable("w_sy", [hidden_size,action_size], initializer=initializer)
+
+            # b_f = tf.get_variable("b_f",[hidden_size], initializer=initializer)
+            # b_i = tf.get_variable("b_i",[hidden_size], initializer=initializer)
+            # b_g = tf.get_variable("b_g",[hidden_size], initializer=initializer)
+            # b_o = tf.get_variable("b_o",[hidden_size], initializer=initializer)
+            # b_y = tf.get_variable("b_y",[action_size], initializer=initializer)
+
+            # self.f = tf.sigmoid(tf.matmul(tf.expand_dims(self.x_in,0), u_xf) + tf.matmul(self.s_start, w_sf) + b_f)
+
+            # self.i = tf.sigmoid(tf.matmul(tf.expand_dims(self.x_in,0), u_xi) + tf.matmul(self.s_start, w_si) + b_i)
+            # self.g = tf.tanh(tf.matmul(tf.expand_dims(self.x_in,0), u_xg) + tf.matmul(self.s_start, w_sg) + b_g)
+
+            # c_new = tf.add(tf.multiply(self.c_start, self.f), tf.multiply(self.g, self.i))
+
+            # self.o = tf.sigmoid(tf.matmul(tf.expand_dims(self.x_in,0), u_xo) + tf.matmul(self.s_start, w_so) + b_o)
+            # s_new = tf.multiply(tf.tanh(c_new), self.o) + b_y
+
+            # y_out = tf.matmul(s_new, w_sy) + b_y
+
+            # self.s_new = s_new
+            # self.c_last = c_new
+            # print(tf.trainable_variables())
+
+            # gru
+            u_xz = tf.get_variable("u_xz", [state_size,hidden_size], initializer=initializer)
+            u_xr = tf.get_variable("u_xr", [state_size,hidden_size], initializer=initializer)
+            u_xh = tf.get_variable("u_xh",[state_size,hidden_size], initializer=initializer)
+
+            w_sz = tf.get_variable("w_sz",[hidden_size,hidden_size], initializer=initializer)
+            w_sh = tf.get_variable("w_sh", [hidden_size,hidden_size], initializer=initializer)
+            w_sr = tf.get_variable("w_sr", [hidden_size,hidden_size], initializer=initializer)
+
+            b_z = tf.get_variable("b_z",[hidden_size], initializer=initializer)
+            b_r = tf.get_variable("b_r",[hidden_size], initializer=initializer)
             b_h = tf.get_variable("b_h", [hidden_size],initializer=initializer)
+            
+            w_sy = tf.get_variable("w_sy",[hidden_size,action_size], initializer=initializer)
             b_y = tf.get_variable("b_y",[action_size], initializer=initializer)
 
-            h_state = tf.tanh(tf.matmul(tf.expand_dims(self.x_in,0), w_xh) + tf.matmul(h_state, w_hh) + b_h)
-            self.y_out = tf.matmul(h_state, w_hy) + b_y
-
-            self.h_last = h_state
+            z = tf.sigmoid(tf.matmul(tf.expand_dims(self.x_in,0), u_xz) + tf.matmul(self.s_start, w_sz) + b_z)
+            r = tf.sigmoid(tf.matmul(tf.expand_dims(self.x_in,0), u_xr) + tf.matmul(self.s_start, w_sr) + b_r)
+            h = tf.tanh(tf.matmul(tf.expand_dims(self.x_in,0), u_xh) + tf.matmul(tf.multiply(self.s_start, r), w_sh) + b_h)
+            self.s_new = tf.add(tf.multiply((1 - z), h), tf.multiply(z, self.s_start))
+            self.y_out = tf.matmul(self.s_new, w_sy) + b_y
 
         with tf.name_scope('error'):
             self.error = tf.reduce_sum(tf.squared_difference(self.y_out, tf.expand_dims(self.y_target,0))) - self.step_reward
@@ -80,15 +131,17 @@ class RLAgent:
         self.training_step += 1
         state = np.array(state)
         target = np.array(target)
-        _, h_state, summary = self.session.run([self.train_op, self.h_last, self.summary_op],
-                                               feed_dict={ self.x_in: state,
-                                                           self.h_start: self.hidden_state,
-                                                           self.y_target: target,
-                                                           self.step_reward: reward })
+        _, s_current, summary = self.session.run([self.train_op, self.s_new, self.summary_op],
+                                                            feed_dict={ self.x_in: state,
+                                                                        self.s_start: self.hidden_state,
+                                                                        #    self.c_start: self.memory,
+                                                                        self.y_target: target,
+                                                                        self.step_reward: reward })
         self.writer.add_summary(summary, iteration)
         self.training_step += 1
-        self.hidden_state = h_state
-        return h_state
+        self.hidden_state = s_current
+        # self.memory = c_current
+        return
 
     def action(self, state): 
         # state = [usd, eth, eth_price]
@@ -106,9 +159,9 @@ class RLAgent:
         states_actions[1] = np.array([state[0], state[1], state[2], 1])
         states_actions[2] = np.array([state[0], state[1], state[2], 2])
 
-        q[0] = self.session.run(self.y_out, feed_dict={ self.x_in: states_actions[0], self.h_start: hidden_state })
-        q[1] = self.session.run(self.y_out, feed_dict={ self.x_in: states_actions[1], self.h_start: hidden_state })
-        q[2] = self.session.run(self.y_out, feed_dict={ self.x_in: states_actions[2], self.h_start: hidden_state })
+        q[0] = self.session.run(self.y_out, feed_dict={ self.x_in: states_actions[0], self.s_start: hidden_state })
+        q[1] = self.session.run(self.y_out, feed_dict={ self.x_in: states_actions[1], self.s_start: hidden_state })
+        q[2] = self.session.run(self.y_out, feed_dict={ self.x_in: states_actions[2], self.s_start: hidden_state })
 
         self.hidden_state = hidden_state
         # print(q)
