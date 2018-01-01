@@ -21,7 +21,12 @@ class RLAgent:
         self.session = session
         self.training_step = 0
         self.trade_amount = .01
-        self.hidden_state = np.zeros([1,hidden_size])
+        self.trade_max = .10
+        self.trade_grow = 1.10
+        self.hidden_state = np.zeros([cell_layers, action_size, hidden_size])
+        # self.hidden_state = list(map(lambda x: tf.expand_dims(x,0), self.hidden_state))
+        # self.hidden_state = list(map(lambda x: tf.expand_dims(x,0), self.hidden_state))
+        # print(self.hidden_state)
         rd.seed()
 
         NON_ZERO_PENALTY = 1
@@ -31,7 +36,7 @@ class RLAgent:
 
         with tf.name_scope('input'):
             self.x_in = tf.placeholder(tf.float32, shape=[state_size])
-            self.s_start = tf.placeholder(tf.float32, shape=[1, hidden_size])
+            self.s_start = tf.placeholder(tf.float32, shape=[cell_layers, action_size, hidden_size])
             self.y_target = tf.placeholder(tf.float32, shape=[])
             self.step_reward = tf.placeholder(tf.float32, shape=[])
 
@@ -91,15 +96,18 @@ class RLAgent:
 
     def step(self, state, action):
         usd, eth, eth_price = state
+        if self.training_step % 50 == 0:
+            if self.trade_amount < self.trade_max:
+                self.trade_amount *= self.trade_grow
 
         if action == 1:                                   # buy eth
-            usd_sell = .05 * usd                            # buy with 5% of remaining usd
+            usd_sell = self.trade_amount * usd                            # buy with 5% of remaining usd
             buy_price = eth_price * (1 + .005)              # .5% markup
             eth_buy = (usd_sell / buy_price) * (1 - .0025)  # .25% trade fee
             usd = usd - usd_sell
             eth = eth + eth_buy
         elif action == 2:                                   # sell eth
-            eth_sell = .05 * eth                            # sell 5% of remaining eth
+            eth_sell = self.trade_amount * eth                            # sell 5% of remaining eth
             sell_price = eth_price * (1 - .005)             # .5% markdown
             usd_buy = eth_sell * sell_price * (1 - .0025)   # .25% trade fee
             usd = usd + usd_buy
