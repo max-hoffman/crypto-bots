@@ -32,6 +32,7 @@ with tf.Session() as session:
             self.last_net = self.usd + self.eth * 700
             self.last_state = [self.usd, self.eth, 700, 0]
             self.nets = []
+            self.action_counts = [0, 0, 0]
             print("Lets count the messages!")
 
         def on_close(self):
@@ -47,6 +48,8 @@ with tf.Session() as session:
                 # get new trade
                 eth_price = float(msg["price"])
                 current_net = self.eth * eth_price + self.usd
+                if self.iteration == 1:
+                    self.starting_net = current_net
 
                 # back-propogate with last net
                 agent.train(state=self.last_state,
@@ -61,13 +64,17 @@ with tf.Session() as session:
                 self.last_net = current_net
 
                 self.nets.append([self.iteration, current_net])
+                self.action_counts[int(last_action)] += 1
                 if self.iteration % 200 == 0:
                     if self.iteration % 800 == 0:
                         print_to_console(np.array(self.nets)[self.iteration-800:self.iteration, :], self.iteration)
                     print("iteration", self.iteration)
                     print("state", self.last_state)
                     print("current net", current_net)
+                    print("% of starting value",current_net / self.starting_net,"%")
+                    print("hold, buy, sell", self.action_counts[0] / 200.0, self.action_counts[1] / 200.0, self.action_counts[2] / 200.0)
                     print("-----------")
+                    self.action_counts = [0,0,0]
                 
     input_size = 4
     output_size = 1

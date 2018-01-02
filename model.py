@@ -36,15 +36,14 @@ class RLAgent:
             # self.s_start = tf.placeholder(tf.float32, shape=[cell_layers, action_size, hidden_size])
             self.y_target = tf.placeholder(tf.float32, shape=[])
             self.step_reward = tf.placeholder(tf.float32, shape=[])
-
-        with tf.name_scope('model'):
-            # self.y_out = tf.placeholder(tf.float32, shape=[1, action_size])
-            # self.y_out, self.s_new = GRUStack(self.x_in, self.s_start, cell_layers)
-
             self.x_in = tf.placeholder(tf.float32, [1, 1, state_size])
             self.y_out = tf.placeholder(tf.float32, [1, action_size])
             self.hidden_start = tf.placeholder(tf.float32, [cell_layers, 2, action_size, hidden_size])
 
+        with tf.name_scope('model'):
+            # self.y_out, self.s_new = GRUStack(self.x_in, self.s_start, cell_layers)
+
+            # organize cells in layers, side-step tf bugs
             layers = tf.unstack(self.hidden_start, axis=0)
             rnn_tuple_state = tuple(
                 [tf.nn.rnn_cell.LSTMStateTuple(layers[idx][0], layers[idx][1])
@@ -52,8 +51,9 @@ class RLAgent:
             )
             def lstm_cell():
                 return tf.nn.rnn_cell.LSTMCell(hidden_size, state_is_tuple=True)
-
             stacked_lstm = tf.nn.rnn_cell.MultiRNNCell([lstm_cell() for _ in range(cell_layers)], state_is_tuple=True)
+
+            # actual transformations
             outputs, self.hidden_new = tf.nn.dynamic_rnn(stacked_lstm, self.x_in, initial_state=rnn_tuple_state)
             w_sy = tf.Variable(tf.random_normal([hidden_size,action_size], stddev=.1))
             b_y = tf.Variable(tf.random_normal([action_size], stddev=.1))
@@ -69,6 +69,8 @@ class RLAgent:
         tf.summary.scalar("error", self.error)
         tf.summary.histogram("expected reward", self.y_out)
         tf.summary.histogram("state", self.x_in)
+        tf.summary.histogram("final layer weight", w_sy)
+        tf.summary.histogram("final layer bias", b_y)
         self.summary_op = tf.summary.merge_all(key=tf.GraphKeys.SUMMARIES)
         self.writer = tf.summary.FileWriter(logs_path , session.graph)
     
