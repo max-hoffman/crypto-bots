@@ -29,7 +29,7 @@ with tf.Session() as session:
             self.iteration = 0
             self.usd = 10
             self.eth = .05
-            self.last_net = self.usd + self.eth * 700
+            self.last_eth = self.eth
             self.last_state = [self.usd, self.eth, 700, 0]
             self.nets = []
             self.action_counts = [0, 0, 0]
@@ -54,14 +54,14 @@ with tf.Session() as session:
                 # back-propogate with last net
                 agent.train(state=self.last_state,
                             target=current_net,
-                            reward=current_net - self.last_net,
+                            reward=self.eth-self.last_eth,
                             iteration=self.iteration)
 
                 # forward pass to predict next action and state
                 last_action = agent.action([eth_price, self.eth, self.usd])
                 self.usd, self.eth = agent.step([self.usd, self.eth, eth_price], last_action)
                 self.last_state = [self.usd, self.eth, eth_price, last_action]
-                self.last_net = current_net
+                self.last_eth = self.eth
 
                 self.nets.append([self.iteration, current_net])
                 self.action_counts[int(last_action)] += 1
@@ -78,7 +78,7 @@ with tf.Session() as session:
                 
     input_size = 4
     output_size = 1
-    hidden_size = 32
+    hidden_size = 256
     cell_layers = 8
 
     logs_path = "logs"
@@ -92,11 +92,15 @@ with tf.Session() as session:
                     session=session,
                     logs_path=logs_path)
     session.run(tf.global_variables_initializer())
+    saver = tf.train.Saver(max_to_keep=4, keep_checkpoint_every_n_hours=2, filename="crypto-trader")
 
     wsClient = myWebsocketClient()
     wsClient.start()
     print(wsClient.url, wsClient.products)
-    while (wsClient.iteration < 30000):
+    while (True):
+        if (wsClient.iteration % 30000 == 0):
+            # saver.save(session, "crypto-trader-model", global_step=wsClient.iteration)
+
         continue
         # print ("\niteration =", "{} \n".format(wsClient.iteration))
         # time.sleep(1)

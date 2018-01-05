@@ -14,8 +14,8 @@ class RLAgent:
         self.action_size = action_size
         self.memory = deque(maxlen=2000)
         self.gamma = 0.95    # discount rate
-        self.epsilon = .1  # exploration rate
-        self.epsilon_min = 0.01
+        self.epsilon = .25  # exploration rate
+        self.epsilon_min = 0.0001
         self.epsilon_decay = 0.995
         self.learning_rate = 0.5
         self.session = session
@@ -92,7 +92,7 @@ class RLAgent:
     def action(self, state): 
         # state = [usd, eth, eth_price]
         if self.epsilon > self.epsilon_min:
-            if self.training_step % 50 == 0:
+            if self.training_step % 100 == 0:
                 self.epsilon *= self.epsilon_decay
         if rd.random() <= self.epsilon:
             return rd.randrange(0, 3)
@@ -113,24 +113,24 @@ class RLAgent:
         return np.argmax(q)
 
     def step(self, state, action):
-        usd, eth, eth_price = state
+        main, alt, alt_price = state
         # if self.training_step % 50 == 0:
         #     if self.trade_amount < self.trade_max:
         #         self.trade_amount *= self.trade_grow
 
-        if action == 1:                                     # buy eth
-            usd_sell = self.trade_amount * usd              # buy with 5% of remaining usd
-            buy_price = eth_price * (1 + .005)              # .5% markup
-            eth_buy = (usd_sell / buy_price) * (1 - .0025)  # .25% trade fee
-            usd = usd - usd_sell
-            eth = eth + eth_buy
-        elif action == 2:                                   # sell eth
-            eth_sell = self.trade_amount * eth              # sell 5% of remaining eth
-            sell_price = eth_price * (1 - .005)             # .5% markdown
-            usd_buy = eth_sell * sell_price * (1 - .0025)   # .25% trade fee
-            usd = usd + usd_buy
-            eth = eth - eth_sell
-        return usd, eth
+        if action == 1:                                     # buy alt
+            main_sell = self.trade_amount * main              # buy with 5% of remaining main
+            buy_price = alt_price * (1 + .005)              # .5% markup
+            alt_buy = (main_sell / buy_price) * (1 - .0025)  # .25% trade fee
+            main = main - main_sell
+            alt = alt + alt_buy
+        elif action == 2:                                   # sell alt
+            alt_sell = self.trade_amount * alt              # sell 5% of remaining alt
+            sell_price = alt_price * (1 - .005)             # .5% markdown
+            main_buy = alt_sell * sell_price * (1 - .0025)   # .25% trade fee
+            main = main + main_buy
+            alt = alt - alt_sell
+        return main, alt
         
     def kill(self):
         self.writer.close()
