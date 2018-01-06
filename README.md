@@ -1,25 +1,26 @@
 ## setup
-  ### dependency gathering:
+  ### dependency gathering for local:
   ```pip install -r requirements.txt```
   
-  ### ubuntu daemon:
-  * http://reustle.org/managing-long-running-processes-with-supervisor.html
-  1. install supervisord
-  ```sudo apt-get install supervisor -y && sudo supervisord```
-  3. create and edit config file:
-  ```sudo nano gdax_bot.conf```
+  ### ubuntu daemon for VM:
+
+  #### get pm2:
   ```
-  [program:gdax_bot]
-  command=python -u main.py
-  directory=/home/ubuntu/src/crypto-bots/
-  stdout_logfile=/home/ubuntu/gdax_bot_output.txt
-  redirect_stderr=true
+  sudo apt-get install yarn
+  yarn add pm2
   ```
-  4. made config available
-  ```sudo supervisorctl reread```
-  5. run program
-  ```sudo supervisorctl add gdax_bot```
-  6. check logs
+  add symlink if node is stored as "nodejs"
+  ```
+  ln -s /usr/bin/nodejs /usr/bin/node
+  ```
+
+  #### use virtual env:
+  1. make virtual env
+  2. install local reqs
+  3. copy to unnamed file:
+  ```cp main.py main```
+  4. run with local interpreter
+  ```pm2 start ./main --interpreter ./venv/bin/python```
 
   ### dependency management:
   1. virtual env
