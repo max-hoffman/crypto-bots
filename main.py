@@ -22,15 +22,6 @@ def print_to_console(data, iteration):
     plt.show()
     return
 
-def log_to_db(data, date):
-    mean = np.mean(data[:,1])
-    std = np.std(data[:,1])
-    start = data[0, 1]
-    end = data[-1, 1]
-    high = np.max(data[:,1])
-    low = np.min(data[:,1])
-
-    self.db.insert_point(mean, std, date, start, end, high, low)
 
 with tf.Session() as session:
 
@@ -89,7 +80,17 @@ with tf.Session() as session:
                     if self.iteration % 800 == 0:
                         np_nets = np.array(self.nets)[self.iteration-800:self.iteration, :]
                         print_to_console(np_nets, self.iteration)
-                        log_to_db(np_nets, str(msg["time"]))
+                        self.log_to_db(np_nets, str(msg["time"]))
+
+        def log_to_db(self, data, date):
+            mean = np.mean(data[:,1])
+            std = np.std(data[:,1])
+            start = data[0, 1]
+            stop = data[-1, 1]
+            high = np.max(data[:,1])
+            low = np.min(data[:,1])
+
+            self.db.insert_point(mean, std, start, stop, high, low, date)
                 
     input_size = 4
     output_size = 1

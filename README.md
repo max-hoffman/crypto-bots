@@ -1,4 +1,26 @@
 ## setup
+  ### dependency gathering:
+  ```pip install -r requirements.txt```
+  
+  ### ubuntu daemon:
+  * http://reustle.org/managing-long-running-processes-with-supervisor.html
+  1. install supervisord
+  ```sudo apt-get install supervisor -y && sudo supervisord```
+  3. create and edit config file:
+  ```sudo nano gdax_bot.conf```
+  ```
+  [program:gdax_bot]
+  command=python -u main.py
+  directory=/home/ubuntu/src/crypto-bots/
+  stdout_logfile=/home/ubuntu/gdax_bot_output.txt
+  redirect_stderr=true
+  ```
+  4. made config available
+  ```sudo supervisorctl reread```
+  5. run program
+  ```sudo supervisorctl add gdax_bot```
+  6. check logs
+
   ### dependency management:
   1. virtual env
   ```
