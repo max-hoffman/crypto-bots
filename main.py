@@ -1,10 +1,12 @@
+#!/usr/bin/python
+
 import gdax, time
 import tensorflow as tf
 import numpy as np
 from model import RLAgent
 import matplotlib
 import matplotlib.pyplot as plt
-# matplotlib.rc('axes',edgecolor='grey')
+from db import DB
 
 def print_to_console(data, iteration):
     plt.close("all")
@@ -18,7 +20,17 @@ def print_to_console(data, iteration):
     # ax.xaxis.label.set_color("white")
     # ax.tick_params(axis="x", colors="white")
     plt.show()
-    return 
+    return
+
+def log_to_db(data, date):
+    mean = np.mean(data[:,1])
+    std = np.std(data[:,1])
+    start = data[0, 1]
+    end = data[-1, 1]
+    high = np.max(data[:,1])
+    low = np.min(data[:,1])
+
+    self.db.insert_point(mean, std, date, start, end, high, low)
 
 with tf.Session() as session:
 
@@ -30,9 +42,10 @@ with tf.Session() as session:
             self.usd = 10
             self.eth = .05
             self.last_eth = self.eth
-            self.last_state = [self.usd, self.eth, 700, 0]
+            self.last_state = [self.usd, self.eth, 900, 0]
             self.nets = []
             self.action_counts = [0, 0, 0]
+            self.db = DB()
             print("Lets count the messages!")
 
         def on_close(self):
@@ -66,8 +79,6 @@ with tf.Session() as session:
                 self.nets.append([self.iteration, current_net])
                 self.action_counts[int(last_action)] += 1
                 if self.iteration % 200 == 0:
-                    if self.iteration % 800 == 0:
-                        print_to_console(np.array(self.nets)[self.iteration-800:self.iteration, :], self.iteration)
                     print("iteration", self.iteration)
                     print("state", self.last_state)
                     print("current net", current_net)
@@ -75,6 +86,10 @@ with tf.Session() as session:
                     print("hold, buy, sell", self.action_counts[0] / 200.0, self.action_counts[1] / 200.0, self.action_counts[2] / 200.0)
                     print("-----------")
                     self.action_counts = [0,0,0]
+                    if self.iteration % 800 == 0:
+                        np_nets = np.array(self.nets)[self.iteration-800:self.iteration, :]
+                        print_to_console(np_nets, self.iteration)
+                        log_to_db(np_nets, str(msg["time"]))
                 
     input_size = 4
     output_size = 1
@@ -98,7 +113,7 @@ with tf.Session() as session:
     wsClient.start()
     print(wsClient.url, wsClient.products)
     while (True):
-        if (wsClient.iteration % 30000 == 0):
+        # if (wsClient.iteration % 30000 == 0):
             # saver.save(session, "crypto-trader-model", global_step=wsClient.iteration)
 
         continue

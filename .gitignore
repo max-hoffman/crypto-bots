@@ -3,3 +3,4 @@ help
 logs
 .vscode
 *.pyc
+database.ini
