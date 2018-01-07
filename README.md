@@ -6,8 +6,9 @@
 
   #### get pm2:
   ```
-  sudo apt-get install yarn
-  yarn add pm2
+  sudo apt-get install node
+  sudo apt-get install npm
+  sudo npm install -g pm2
   ```
   add symlink if node is stored as "nodejs"
   ```
@@ -21,6 +22,13 @@
   ```cp main.py main```
   4. run with local interpreter
   ```pm2 start ./main --interpreter ./venv/bin/python```
+
+  #### workaround:
+  try installing requirements with particular python version
+  ```
+  python2.7 -m pip install some-python-package
+  python3.4 -m pip install some-python-package
+  ```
 
   ### dependency management:
   1. virtual env

@@ -70,17 +70,19 @@ with tf.Session() as session:
                 self.nets.append([self.iteration, current_net])
                 self.action_counts[int(last_action)] += 1
                 if self.iteration % 200 == 0:
-                    print("iteration", self.iteration)
+                    # print("iteration", self.iteration)
                     print("state", self.last_state)
                     print("current net", current_net)
                     print("% of starting value",current_net / self.starting_net,"%")
                     print("hold, buy, sell", self.action_counts[0] / 200.0, self.action_counts[1] / 200.0, self.action_counts[2] / 200.0)
                     print("-----------")
                     self.action_counts = [0,0,0]
-                    if self.iteration % 800 == 0:
-                        np_nets = np.array(self.nets)[self.iteration-800:self.iteration, :]
+                    if self.iteration % 1000 == 0:
+                        np_nets = np.array(self.nets)
                         print_to_console(np_nets, self.iteration)
                         self.log_to_db(np_nets, str(msg["time"]))
+                        self.nets = []
+                        self.iteration = 0
 
         def log_to_db(self, data, date):
             mean = np.mean(data[:,1])
